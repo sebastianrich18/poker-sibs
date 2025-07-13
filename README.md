@@ -160,3 +160,21 @@ graph TD
     %% Internal Coordinator interactions
     B -->|"Assign to lobby"| C
 ```
+
+## Quickstart
+
+Install dependencies and run the servers locally:
+
+```bash
+pip install fastapi uvicorn
+uvicorn src.coordinator.application.api:app --reload
+uvicorn src.lobby.application.lobby:app --reload --port 8001
+```
+
+Terraform can be used to create the base AWS ECS cluster:
+
+```bash
+cd terraform
+terraform init
+terraform apply
+```
