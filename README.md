@@ -19,7 +19,7 @@ This document outlines the system architecture and design decisions for building
 ### Poker Client App
 
 * Connects via WebSocket to lobby servers
-* Initiates REST calls for login, lobby join, user info
+* Initiates REST calls for login, user info
 
 ### Load Balancer
 
@@ -32,16 +32,18 @@ This document outlines the system architecture and design decisions for building
 
   * Lobby listings
   * User login and account creation
-  * Join requests: reads chip balance, sets `in_lobby=true`
   * Leave events: updates chip balance and clears `in_lobby` flag
+  * Notifies lobby of player leave through internal-only API
 * Talks directly to the Main DB
 
 ### Lobby Server
 
 * Manages gameplay and WebSocket communication
-* On join: receives chip balance from Coordinator
+* On join: receives chip balance from Coordinator via internal HTTP API
 * During game: maintains chip state in memory
-* On player leave/disconnect: calls `POST /lobby/{ID}/user/{USER_ID}/leave` on Coordinator
+* On player leave/disconnect: calls internal Coordinator API to flush chip delta and clear flags
+* Exposes an internal HTTP API for coordinators to notify player disconnection
+* **No direct DB access**
 
 ### Main DB
 
@@ -55,7 +57,38 @@ This document outlines the system architecture and design decisions for building
 
 ---
 
-## Key Endpoints
+## Database Schema (MVP)
+
+### `users`
+
+| Column          | Type            | Notes                          |
+| --------------- | --------------- | ------------------------------ |
+| `id`            | UUID (PK)       | Primary key                    |
+| `username`      | VARCHAR UNIQUE  | Display / login name           |
+| `password_hash` | VARCHAR         | Argon2 / bcrypt hash           |
+| `chip_count`    | BIGINT UNSIGNED | Current chip balance           |
+| `in_lobby`      | BOOLEAN         | `TRUE` while seated in a lobby |
+
+### `lobbies`
+
+| Column        | Type      | Notes                                              |
+| ------------- | --------- | -------------------------------------------------- |
+| `id`          | UUID (PK) | Set by Coordinator `POST /internal/lobby/register` |
+| `target`      | VARCHAR   | Host/IP + port or other connection identifier      |
+| `max_players` | SMALLINT  | Table capacity                                     |
+
+### `lobby_players`
+
+Associates players currently seated in a lobby.
+
+| Column     | Type      | Notes                   |
+| ---------- | --------- | ----------------------- |
+| `lobby_id` | UUID (FK) | References `lobbies.id` |
+| `user_id`  | UUID (FK) | References `users.id`   |
+
+---
+
+## Key Coordinator Endpoints
 
 ### User Management
 
@@ -67,8 +100,16 @@ This document outlines the system architecture and design decisions for building
 
 * `GET /lobby` – List all available lobbies
 * `GET /lobby/{id}` – Get specific lobby info
-* `POST /lobby/{id}/join` – Mark user as in-lobby, return chip balance
-* `POST /lobby/{id}/user/{user_id}/leave` – Flush chip balance, clear in-lobby flag
+
+### \[Internal] Lobby Coordination API
+
+* `POST /internal/lobby/register` – Lobby server registers itself with Coordinator
+* `POST /internal/lobby/{id}/join` – Join a user to the lobby, return chip balance, set in\_lobby flag
+* `POST /internal/lobby/{id}/user/{id}/leave` – Handles user disconnected or left
+
+  * Only callable from Lobby, placed on an internal network (not client-facing)
+  * Future-proofed for mTLS or zero-trust service mesh enforcement
+  * Apply chip delta, clear in-lobby flag
 
 ### WebSocket
 
@@ -88,6 +129,7 @@ This document outlines the system architecture and design decisions for building
 | `action`           | Client → Server | `action`, `amount?`                    | `{ "action": "raise", "amount": 200 }`                     |
 | `action-broadcast` | Server → All    | `userId`, `action`, `amount?`          | `{ "userId": "abc123", "action": "raise", "amount": 200 }` |
 | `round-result`     | Server → All    | `results` (map of userId → chip delta) | `{ "results": { "abc123": -100, "def456": 200 } }`         |
+| `leave`            | Client → Server | none                                   | `null`                                                     |
 
 ---
 
@@ -102,20 +144,9 @@ This document outlines the system architecture and design decisions for building
   * Calls Coordinator with final chip total
   * Coordinator atomically writes new balance and clears `in_lobby`
 * Players are blocked from joining another lobby while `in_lobby=true`
-* If a lobby crashes before leave is reported, it’s treated as if the player never joined
+* Leave requests are idempotent — the database should enforce `UPDATE ... WHERE in_lobby = TRUE` to avoid stale writes or repeated deductions
 
 ---
-
-## Outstanding Considerations
-
-| Area                            | Risk                                         | Mitigation                                             |
-| ------------------------------- | -------------------------------------------- | ------------------------------------------------------ |
-| Lobby crash mid-session         | Chip balance + `in_lobby` flag never flushed | Acceptable for now; could add heartbeat/watchdog later |
-| Replay or double leave requests | Chip double-debit                            | Add `session_id` or make DB write idempotent           |
-| Metrics & logs                  | Missing                                      | Add observability for join/leave/chip updates          |
-
----
-
 
 ## System Architecture Diagram
 
@@ -146,17 +177,19 @@ graph TD
     A -->|"POST /login"| LB
     A -->|"POST /create-account"| LB
     A -->|"GET /user/{ID}"| LB
-    A -->|"POST /lobby/{ID}/join (set join flag + read balance)"| LB
 
     %% WebSocket Connections
     A -.->|"WS /lobby/{ID}/ws"| C
 
     %% Lobby Server notifies Coordinator on leave
-    C -->|"POST /lobby/{ID}/user/{USER_ID}/leave (flush chips, clear flag)"| B
+    C -->|"POST /internal/lobby/{ID}/user/{USER_ID}/leave (flush chips, clear flag)"| B
+    C -->|"POST /internal/lobby/register (on lobby startup)"| B
+    B -->|"POST /internal/lobby/{ID}/join (set join flag + read balance)"| C
 
     %% Coordinator commits chip update & clears flag
     B -->|"Update chip balance + clear join flag"| D
 
     %% Internal Coordinator interactions
     B -->|"Assign to lobby"| C
+    B -->|"POST /internal/player/leave"| C
 ```
