@@ -1,30 +1,35 @@
 from pydantic import BaseModel
 from typing import Dict, Optional
+from ...core.domain.entities import EntityId
+from ...poker.domain.entities import Card, ActionType
+
 
 class JoinAck(BaseModel):
-    userId: str
+    userId: EntityId
     seat: int
+
 
 class ErrorMessage(BaseModel):
     error: str
 
+
 class PlayerJoined(BaseModel):
-    userId: str
+    userId: EntityId
     seat: int
 
-class PlayerLeft(BaseModel):
-    userId: str
 
-class Card(BaseModel):
-    rank: str
-    suit: str
+class PlayerLeft(BaseModel):
+    userId: EntityId
+
 
 class Action(BaseModel):
-    action: str
+    action: ActionType
     amount: Optional[int] = None
 
+
 class ActionBroadcast(Action):
-    userId: str
+    userId: EntityId
+
 
 class RoundResult(BaseModel):
     results: Dict[str, int]

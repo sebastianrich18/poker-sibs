@@ -3,53 +3,30 @@ from typing import Optional, List
 
 import asyncpg
 
-from ..domain.entities import User, Lobby
+from ..domain.entities import User, Lobby, EntityId
 from ..domain.interfaces import UserRepository, LobbyRepository
 
 
-class PostgresService:
-    """Lightweight wrapper around an asyncpg connection pool."""
-
-    def __init__(self, dsn: str | None = None) -> None:
-        self.dsn = dsn or os.getenv("DATABASE_URL", "postgresql://user:pass@localhost/postgres")
-        self.pool: asyncpg.pool.Pool | None = None
-
-    async def __aenter__(self) -> "PostgresService":
-        await self.connect()
-        return self
-
-    async def __aexit__(self, exc_type, exc, tb) -> None:
-        await self.disconnect()
-
-    async def connect(self) -> None:
-        self.pool = await asyncpg.create_pool(self.dsn)
-
-    async def disconnect(self) -> None:
-        if self.pool:
-            await self.pool.close()
-            self.pool = None
-
-
 class PostgresUserRepository(UserRepository):
-    def __init__(self, service: PostgresService):
-        self.service = service
+    def __init__(self, pool: asyncpg.pool.Pool) -> None:
+        self.pool = pool
 
-    async def get(self, user_id: str) -> Optional[User]:
-        row = await self.service.pool.fetchrow(
+    async def get_by_id(self, user_id: EntityId) -> Optional[User]:
+        row = await self.pool.fetchrow(
             "SELECT id, username, hashed_password, chips, in_lobby FROM users WHERE id=$1",
-            user_id,
+            str(user_id),
         )
         return User(**row) if row else None
 
     async def get_by_username(self, username: str) -> Optional[User]:
-        row = await self.service.pool.fetchrow(
+        row = await self.pool.fetchrow(
             "SELECT id, username, hashed_password, chips, in_lobby FROM users WHERE username=$1",
             username,
         )
         return User(**row) if row else None
 
     async def create(self, username: str, password: str) -> User:
-        row = await self.service.pool.fetchrow(
+        row = await self.pool.fetchrow(
             "INSERT INTO users (username, hashed_password, chips, in_lobby) "
             "VALUES ($1, $2, 1000, false) "
             "RETURNING id, username, hashed_password, chips, in_lobby",
@@ -59,34 +36,34 @@ class PostgresUserRepository(UserRepository):
         return User(**row)
 
     async def update(self, user: User) -> None:
-        await self.service.pool.execute(
+        await self.pool.execute(
             "UPDATE users SET username=$1, hashed_password=$2, chips=$3, in_lobby=$4 WHERE id=$5",
             user.username,
             user.hashed_password,
             user.chips,
             user.in_lobby,
-            user.id,
+            str(user.id),
         )
 
 
 class PostgresLobbyRepository(LobbyRepository):
-    def __init__(self, service: PostgresService):
-        self.service = service
+    def __init__(self, pool: asyncpg.pool.Pool) -> None:
+        self.pool = pool
 
     def _row_to_lobby(self, row: asyncpg.Record) -> Lobby:
         players = row.get("players") or []
         if not isinstance(players, list):
             players = list(players)
         return Lobby(
-            id=str(row["id"]),
+            id=EntityId(str(row["id"])),
             name=row["name"],
             max_players=row["max_players"],
-            players=players,
+            players=[EntityId(str(p)) for p in players],
             status=row["status"],
         )
 
     async def list(self) -> List[Lobby]:
-        rows = await self.service.pool.fetch(
+        rows = await self.pool.fetch(
             """
             SELECT l.id, l.name, l.max_players, l.status,
                    COALESCE(array_agg(lp.user_id) FILTER (WHERE lp.user_id IS NOT NULL), '{}') AS players
@@ -97,8 +74,8 @@ class PostgresLobbyRepository(LobbyRepository):
         )
         return [self._row_to_lobby(r) for r in rows]
 
-    async def get(self, lobby_id: str) -> Optional[Lobby]:
-        row = await self.service.pool.fetchrow(
+    async def get_by_id(self, lobby_id: EntityId) -> Optional[Lobby]:
+        row = await self.pool.fetchrow(
             """
             SELECT l.id, l.name, l.max_players, l.status,
                    COALESCE(array_agg(lp.user_id) FILTER (WHERE lp.user_id IS NOT NULL), '{}') AS players
@@ -107,25 +84,24 @@ class PostgresLobbyRepository(LobbyRepository):
             WHERE l.id=$1
             GROUP BY l.id
             """,
-            lobby_id,
+            str(lobby_id),
         )
         return self._row_to_lobby(row) if row else None
 
     async def update(self, lobby: Lobby) -> None:
-        await self.service.pool.execute(
+        await self.pool.execute(
             "UPDATE lobbies SET name=$1, max_players=$2, status=$3 WHERE id=$4",
             lobby.name,
             lobby.max_players,
             lobby.status,
-            lobby.id,
+            str(lobby.id),
         )
-        # refresh player associations
-        await self.service.pool.execute(
+        await self.pool.execute(
             "DELETE FROM lobby_players WHERE lobby_id=$1",
-            lobby.id,
+            str(lobby.id),
         )
         if lobby.players:
-            await self.service.pool.executemany(
+            await self.pool.executemany(
                 "INSERT INTO lobby_players (lobby_id, user_id) VALUES ($1, $2)",
-                [(lobby.id, uid) for uid in lobby.players],
+                [(str(lobby.id), str(uid)) for uid in lobby.players],
             )
