@@ -178,3 +178,7 @@ cd terraform
 terraform init
 terraform apply
 ```
+
+The provided Terraform configuration uses the smallest available instance
+types (`db.t3.micro` for the database and the minimal Fargate CPU/memory
+options) to keep costs low.
