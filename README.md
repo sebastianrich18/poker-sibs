@@ -193,3 +193,25 @@ graph TD
     B -->|"Assign to lobby"| C
     B -->|"POST /internal/player/leave"| C
 ```
+
+## Quickstart
+
+Install dependencies and run the servers locally. The easiest way is via
+`docker-compose`, which will launch Postgres plus the two services:
+
+```bash
+docker-compose up --build
+alembic upgrade head
+```
+
+Terraform can be used to create the base AWS ECS cluster:
+
+```bash
+cd terraform
+terraform init
+terraform apply
+```
+
+The provided Terraform configuration uses the smallest available instance
+types (`db.t3.micro` for the database and the minimal Fargate CPU/memory
+options) to keep costs low.
