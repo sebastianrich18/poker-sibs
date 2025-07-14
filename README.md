@@ -163,12 +163,12 @@ graph TD
 
 ## Quickstart
 
-Install dependencies and run the servers locally:
+Install dependencies and run the servers locally. The easiest way is via
+`docker-compose`, which will launch Postgres plus the two services:
 
 ```bash
-pip install fastapi uvicorn
-uvicorn src.coordinator.application.api:app --reload
-uvicorn src.lobby.application.lobby:app --reload --port 8001
+docker-compose up --build
+alembic upgrade head
 ```
 
 Terraform can be used to create the base AWS ECS cluster:
