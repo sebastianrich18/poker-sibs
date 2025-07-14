@@ -1,0 +1,7 @@
+websockets
+asyncio
+pydantic
+fastapi
+uvicorn
+sqlalchemy
+alembic
