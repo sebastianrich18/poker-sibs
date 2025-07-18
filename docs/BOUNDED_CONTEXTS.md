@@ -2,52 +2,42 @@
 
 ---
 
-### 1. Players Context
-
-**Responsibility**: Identity and authentication management.
-
-* Owns player profiles and preferences.
-* Issues JWTs for session management.
-* Stateless service; no chip, session, or game state.
-* Exposes: `authenticate()`, `getProfile()`, `updatePreferences()`
-
----
-
-### 2. Gameplay Context
+### 1. Gameplay Context
 
 **Responsibility**: Managing game state, rules, and resolution.
 
-**Modules**:
-
-* **Game Engine**: Pure domain logic—validates actions, updates hand state, calculates winners.
-
+* **Game Engine**: Pure domain logic—validates actions, updates hand state, calculates winners
 * **Game Session**: Real-time orchestration—manages WebSocket connections, turn timers, and heartbeats.
-
-* Consumes: `startGame(tableConfig)`, `playerAction(input)`
-
-* Emits: `HandEnded`, `InvalidMove`, `TimerExpired`
+* **Game Ledger**: Manages a leadger for every hand, is included in LeaveEvent for settlement
+* Consumes: `JoinRequestEvent`, `LeaveRequestEvent`, `TableStartRequestEvent`, `TableStopRequestEvent`
+* Supplies: `JoinEvent`, `LeaveEvent`, `TableStartEvent`, `TableStopEvent`, `HandCompletedEvent`
 
 ---
 
-### 3. Lobby & Table Management Context
+### 2. Lobby & Table Management Context
 
 **Responsibility**: Player flow and table lifecycle management.
 
 * Manages tables, seating, and player queues.
 * Coordinates table creation/destruction.
 * Validates player eligibility based on buy-in.
-* Emits: `PlayerSeated`, `SeatOpen`, `TableReady`
-* Consumes: `reserveChips()`, `getAvailableTables()`
+* Consumes: `TableStartEvent`, `TableStopEvent`
+* Supplies: `TableStartRequestEvent`, `TableStopRequestEvent`, `JoinRequestEvent`, `LeaveRequestEvent`
 
 ---
 
-### 4. Settlement Context
+### 3. Settlement Context
 
 **Responsibility**: Authoritative ledger for chip ownership and transfer.
 
 * Manages chip reservations and balances.
-* Applies deltas emitted from Gameplay via event-driven model.
+* Applies chip deltas and resolves reservations.
 * Critical for audit and correctness.
-* Exposes: `reserveChips(playerId, amount)`, `applyWinnings(handId)`, `getBalance(playerId)`
-* Emits: `ReservationCreated`, `BalanceUpdated`, `SettlementFailed`
 * Implements compensating logic for failure handling (e.g., expired reservations).
+* Consumes: `JoinEvent`, `LeaveEvent`
+* Supplies: `ReservationCreatedEvent`, `SettlementAppliedEvent` (just for auditability, not consumed currently)
+
+
+### Future Contexts
+1. Audit: Validate ledger, settlements, and reservations
+2. Analytics: Replay all played hands
