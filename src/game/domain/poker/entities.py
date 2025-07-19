@@ -1,6 +1,2 @@
-
 class HandState:
     pass
-
-
-

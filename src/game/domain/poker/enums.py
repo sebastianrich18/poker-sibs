@@ -1,10 +1,10 @@
-
-
 class Suit:
     pass
+
 
 class Rank:
     pass
 
-class Action:
+
+class ActionType:
     pass

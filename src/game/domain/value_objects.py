@@ -1,7 +1,5 @@
-
-
 from abc import ABC
 
 
-class GameState(ABC):
+class GameAction(ABC):
     pass

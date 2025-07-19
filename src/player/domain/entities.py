@@ -1,3 +1,5 @@
+class PlayerId:
+    pass
 
 
 class Player:

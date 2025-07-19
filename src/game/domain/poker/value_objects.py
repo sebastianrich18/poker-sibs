@@ -1,5 +1,3 @@
-
-
 from game.domain.value_objects import GameState
 
 
