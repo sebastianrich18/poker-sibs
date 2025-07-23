@@ -1,8 +1,5 @@
 from game.application.game_service import GameService
-from game.domain.exceptions import NoOpenSeatsError
-from player.domain.entities import PlayerId
-from table.domain.entities import TableId
-from table.domain.exceptions import NoOpenSeatsAtTableError
+from shared.types import TableId, PlayerId
 
 
 class TableService:
@@ -16,7 +13,7 @@ class TableService:
 
         try:
             self.game_service.seat_player(player_id)
-        except NoOpenSeatsError:
+        except NoSeatsAvaliableError:
             # release chips
             raise
         return True

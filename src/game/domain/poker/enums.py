@@ -1,10 +1,3 @@
-class Suit:
-    pass
+from enum import Enum
 
 
-class Rank:
-    pass
-
-
-class ActionType:
-    pass

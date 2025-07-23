@@ -1,14 +1,14 @@
-from game.domain.entities import Game
-from player.domain.entities import PlayerId
-from table.domain.exceptions import NoOpenSeatsAtTableError, PlayerNotAtTableError
+
 
 
 class TableId:
     pass
 
 
-class Table:
+class TableConfig:
     id: TableId
-    game: Game
+    name: str
+    stakes: str
     max_seats: int
-    seats: dict[int, PlayerId]  # seat_num -> player_id
+    min_buy_in: int
+    max_buy_in: int

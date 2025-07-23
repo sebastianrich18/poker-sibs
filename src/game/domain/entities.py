@@ -1,13 +1,13 @@
 from typing import Dict, List, Optional
 
+from game.domain.exceptions import NoSeatsAvaliableError, PlayerNotFoundError
 from game.domain.interfaces import GameEngine, GameState
 from game.domain.value_objects import GameAction
-from player.domain.entities import PlayerId
-
+from shared.types import PlayerId
 
 class Game:
     table_id: str
-    seats: Dict[int, str]  # seat_num -> player_id
+    seats: Dict[int, PlayerId]  # seat_num -> player_id
     current_turn_seat: int
 
     game_state: GameState
@@ -38,7 +38,7 @@ class Game:
     def seat_player(self, player_id: PlayerId) -> bool:
         """Add player to table if space available"""
         if self.is_full():
-            raise NoOpenSeatsError("Game has no open seats")
+            raise NoSeatsAvaliableError("Game has no open seats")
         for seat in range(self.max_seats):
             if seat not in self.seats:
                 self.seats[seat] = player_id

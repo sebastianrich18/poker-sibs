@@ -1,0 +1,5 @@
+
+
+PlayerId = str
+TableId = str
+
