@@ -11,6 +11,7 @@ class ReservationId:
 class TransactionId:
     pass
 
+
 class Reservation:
     id: ReservationId
     table_id: TableId

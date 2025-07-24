@@ -3,6 +3,7 @@ from fastapi import APIRouter
 
 wallet_router = APIRouter(prefix="/v1/wallet", tags=["Wallet"])
 
+
 @wallet_router.get("/{player_id}")
 async def get_wallet(player_id: int):
     """

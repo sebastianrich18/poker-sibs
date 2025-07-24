@@ -4,12 +4,7 @@ from player.domain.entities import PlayerId
 from table.domain.entities import TableId
 from wallet.domain.value_objects import Reservation, Transaction
 
-
-
-
-
-class WalletId:
-    pass
+from shared.types import WalletId
 
 
 class Wallet:

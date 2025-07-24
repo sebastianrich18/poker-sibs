@@ -5,6 +5,7 @@ from game.domain.interfaces import GameEngine, GameState
 from game.domain.value_objects import GameAction
 from shared.types import PlayerId
 
+
 class Game:
     table_id: str
     seats: Dict[int, PlayerId]  # seat_num -> player_id

@@ -1,11 +1,24 @@
 from player.application.interfaces import PlayerQueryService
 
 
+class FileSystemPlayerQueryService(PlayerQueryService):
+    """
+    Implementation of PlayerQueryService for file system storage.
+    """
+
+    def get_player(self, player_id: int):
+        """
+        Retrieve player information by player ID.
+        """
+        # Placeholder for actual file system query logic
+        return {"player_id": player_id, "name": "Player Name", "status": "active"}
+
+
 class PostgressPlayerQueryService(PlayerQueryService):
     """
     Implementation of PlayerQueryService for PostgreSQL.
     """
-    
+
     def __init__(self, db_session):
         self.db_session = db_session
 

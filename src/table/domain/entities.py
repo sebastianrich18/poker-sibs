@@ -1,6 +1,3 @@
-
-
-
 class TableId:
     pass
 

@@ -8,13 +8,16 @@ class GameState(ABC):
         """Return a view of the game state for the given player"""
         pass
 
+
 class GameEngine(ABC):
-    def validate_action(self, game_state: "GameState", player_id: str, action: GameAction) -> bool:
+    def validate_action(
+        self, game_state: "GameState", player_id: str, action: GameAction
+    ) -> bool:
         """Validate if action is legal"""
         pass
 
-    def apply_action(self, game_state: "GameState", player_id: str, action: GameAction) -> GameState:
+    def apply_action(
+        self, game_state: "GameState", player_id: str, action: GameAction
+    ) -> GameState:
         """Apply action to game state and return new state"""
         pass
-
-

@@ -8,6 +8,7 @@ class LoginPlayerRequest(BaseModel):
     username: str
     password: str
 
+
 class LoginPlayerResponse(BaseModel):
     access_token: str
     token_type: str
@@ -18,9 +19,11 @@ class CreatePlayerRequest(BaseModel):
     password: str
     email: str
 
+
 class CreatePlayerResponse(BaseModel):
     access_token: str
     token_type: str
+
 
 class GetPlayerResponse(BaseModel):
     player_id: PlayerId

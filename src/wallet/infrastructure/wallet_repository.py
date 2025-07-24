@@ -1,6 +1,3 @@
-
-
-
 from abc import ABC
 from wallet.domain.entities import Wallet, WalletId
 
