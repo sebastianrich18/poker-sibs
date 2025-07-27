@@ -57,11 +57,12 @@ class FileSystemPlayerRepository(IPlayerRepository):
             with open(file_path, "w") as f:
                 f.write("[]")
 
-    def get_player(self, player_id: PlayerId) -> Player:
+    def get_player_by_id(self, player_id: PlayerId) -> Player:
         with open(self.file_path, "r") as f:
             players = json.load(f)
             for player in players:
                 if player["player_id"] == player_id:
+                    player["player_id"] = str(player["player_id"])  # Ensure UUID is a string
                     return Player(**player)
         raise ValueError(f"Player with ID {player_id} not found.")
 
@@ -74,11 +75,13 @@ class FileSystemPlayerRepository(IPlayerRepository):
         raise ValueError(f"Player with username {username} not found.")
 
     def create_player(self, player: Player) -> None:
+        player.player_id = str(player.player_id)  # Ensure UUID is a string
         with open(self.file_path, "r+") as f:
             players = json.load(f)
             players.append(player.model_dump())
             f.seek(0)
             json.dump(players, f)
+        return player
 
     def update_player(self, player: Player) -> None:
         with open(self.file_path, "r+") as f:

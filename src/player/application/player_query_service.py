@@ -1,20 +1,32 @@
-from player.application.interfaces import PlayerQueryService
+import json
+import os
+from player.application.interfaces import IPlayerQueryService
 
 
-class FileSystemPlayerQueryService(PlayerQueryService):
+class FileSystemPlayerQueryService(IPlayerQueryService):
     """
     Implementation of PlayerQueryService for file system storage.
     """
+
+    def __init__(self, file_path="players.json"):
+        self.file_path = file_path
+        if not os.path.exists(file_path):
+            with open(file_path, "w") as f:
+                f.write("[]")
 
     def get_player(self, player_id: int):
         """
         Retrieve player information by player ID.
         """
-        # Placeholder for actual file system query logic
-        return {"player_id": player_id, "name": "Player Name", "status": "active"}
+        with open(self.file_path, "r") as f:
+            players = json.load(f)
+            for player in players:
+                if player["player_id"] == player_id:
+                    return player
+        raise ValueError(f"Player with ID {player_id} not found.")
 
 
-class PostgressPlayerQueryService(PlayerQueryService):
+class PostgressPlayerQueryService(IPlayerQueryService):
     """
     Implementation of PlayerQueryService for PostgreSQL.
     """

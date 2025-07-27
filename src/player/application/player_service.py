@@ -19,6 +19,10 @@ class PlayerService(IPlayerService):
         """
         Create a new player with the provided data.
         """
+        username_exists = self.player_repository.get_player_by_username(username)
+        if username_exists:
+            raise ValueError("Username already exists")
+        
         player = Player(
             player_id=uuid4(),
             username=username,
@@ -32,13 +36,7 @@ class PlayerService(IPlayerService):
         """
         try:
             player = self.player_repository.get_player_by_username(username)
-            if player and HashingService.verify(player.password, password):
+            if player and HashingService.verify(player.password_hash, password):
                 return player
         except ValueError:
             raise ValueError("Invalid username or password")
-
-    def delete_player(self, player_id: int):
-        pass
-
-    def get_player_wallet(self, player_id: int):
-        pass
