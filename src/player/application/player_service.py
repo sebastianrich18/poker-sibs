@@ -19,9 +19,13 @@ class PlayerService(IPlayerService):
         """
         Create a new player with the provided data.
         """
-        username_exists = self.player_repository.get_player_by_username(username)
+        username_exists = True
+        try:
+            self.player_repository.get_player_by_username(username)
+        except ValueError:
+            username_exists = False
         if username_exists:
-            raise ValueError("Username already exists")
+            raise ValueError("Username already exists.")
         
         player = Player(
             player_id=uuid4(),

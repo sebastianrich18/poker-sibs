@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
-
 from player.domain.entities import Player
-from shared.types import PlayerId
 
 
 class IPlayerQueryService(ABC):
